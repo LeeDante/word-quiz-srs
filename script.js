@@ -1,14 +1,16 @@
 // =================================================================
-// 核心腳本: 單字測驗機 (包含所有功能和 CORS 優化)
+// 核心腳本: 單字測驗機 (最終 GET 模式整合版)
 // =================================================================
 
 // 配置區塊：請替換您的專案連結
 const CONFIG = {
     // 您的 Google Sheets CSV 連結 (讀取題庫)
+    // *** 請務必將此處替換為您自己的 CSV 連結 ***
     CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTrY-NhkZX1dladhpRtEUpQmgbVq3qgpuGcDH0ZCuZzfp9k8eCY7228ctr-qgh6ETm6eskomrawZTQ6/pub?gid=0&single=true&output=csv", 
     
     // 您的 Google Apps Script Web App URL (寫入結果)
-    GAS_URL: "https://script.google.com/macros/s/AKfycby5Bgo389yxQXMiKDfHncaFT86LIJPJiIaqTKpHbYt0hIKVU9dq7KqxwhepFbRoXzVr/exec", 
+    // 已替換為您最新部署的 URL
+    GAS_URL: "https://script.google.com/macros/s/AKfycby3XRQXc8sbfs0jS8AyLE4Qnf07bwpIbHgo2eP-K2dCIUOKglAyqjxRCsS684Mq67tp/exec", 
     
     // 選擇題和填空題的預設比例 (0 到 100)
     DEFAULT_SELECTION_RATIO: 70 
@@ -19,7 +21,7 @@ let allWords = [];          // 載入的全部單字
 let quizQueue = [];         // 本次測驗的單字隊列
 let currentQuizIndex = 0;   // 目前測驗題號
 let startTime;              // 記錄測驗開始時間
-let mistakes = [];          // 記錄本次答錯的單字
+let mistakes = [];          // 記錄本次答錯的單字 (物件形式)
 let quizTypeCounts = {      // 紀錄各題型數量
     selection: 0,
     fillIn: 0
@@ -71,12 +73,10 @@ async function loadWords() {
             // 設置範圍上限
             document.getElementById('rangeEnd').value = allWords.length;
             document.getElementById('rangeEnd').max = allWords.length;
-
-            // 這裡原本應該載入 GAS 的歷史與錯題數據，但已跳過。
             document.getElementById('rangeStart').placeholder = '1';
             document.getElementById('rangeEnd').placeholder = allWords.length;
-            console.log("GAS 歷史與錯題數據讀取功能已跳過，預設所有單字為 'new' 狀態。");
-            console.log("當測驗完成後，GAS 會處理寫入與狀態更新。");
+
+            console.log("GAS 歷史與錯題數據讀取功能已跳過。所有單字 mistakes 預設為 0。");
             
         } else {
             document.getElementById('status').textContent = '❌ 載入失敗: 題庫為空。';
@@ -98,17 +98,17 @@ function parseCSV(csv) {
     const words = [];
     // 忽略第一行的標題
     for (let i = 1; i < lines.length; i++) {
-        const columns = lines[i].split(',').map(col => col.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+        // 使用更穩定的方法處理 CSV 分隔符
+        const columns = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || lines[i].split(',').map(col => col.trim());
         
-        // 確保至少有四欄
         if (columns.length >= 4) {
             words.push({
-                index: parseInt(columns[3]) || i, // 序號 (D欄)
-                english: columns[0] || '',       // 英文 (A欄)
-                chinese: columns[1] || '',       // 中文 (B欄)
-                pos: columns[2] || '',           // 詞性 (C欄)
-                status: 'new',                   // 預設狀態
-                mistakes: 0                      // 預設錯誤次數
+                index: parseInt(columns[3]) || i,       // 序號 (D欄)
+                english: columns[0] || '',              // 英文 (A欄)
+                chinese: columns[1] || '',              // 中文 (B欄)
+                pos: columns[2] || '',                  // 詞性 (C欄)
+                status: 'new',                          // 預設狀態 (讀取功能未實現)
+                mistakes: 0                             // 預設錯誤次數 (讀取功能未實現)
             });
         }
     }
@@ -142,7 +142,7 @@ function startQuiz() {
         return;
     }
     
-    // 根據範圍和數量抽取單字
+    // 根據範圍和數量抽取單字 (使用加權抽取邏輯)
     let selectedWords = filteredWords;
     if (count < filteredWords.length) {
         selectedWords = drawWords(filteredWords, count);
@@ -175,9 +175,45 @@ function startQuiz() {
  * 依據錯誤次數加權抽取單字
  */
 function drawWords(words, count) {
-    // 由於我們跳過了從 GAS 讀取狀態，所有 mistakes 均為 0
-    // 此處暫時使用簡單的隨機抽取
-    return shuffleArray([...words]).slice(0, count);
+    if (words.length <= count) {
+        return words;
+    }
+
+    const weightedList = [];
+    // 由於 mistakes 預設為 0，minMistakes 也是 0。
+    // 這個邏輯將確保每個單字至少有 1 的權重。
+    const minMistakes = Math.min(...words.map(w => w.mistakes)); 
+    
+    // 1. 建立加權列表
+    words.forEach(word => {
+        const weight = 1 + (word.mistakes - minMistakes);
+        for (let i = 0; i < weight; i++) {
+            weightedList.push(word);
+        }
+    });
+
+    // 2. 隨機從加權列表中抽取 (確保不重複)
+    const uniqueDrawnWords = new Set();
+    const drawnWords = [];
+    
+    while (uniqueDrawnWords.size < count && weightedList.length > 0) {
+        const randomIndex = Math.floor(Math.random() * weightedList.length);
+        const selectedWord = weightedList[randomIndex];
+        
+        if (!uniqueDrawnWords.has(selectedWord)) {
+            uniqueDrawnWords.add(selectedWord);
+            drawnWords.push(selectedWord);
+        }
+        
+        // 從加權列表中移除所有該單字的副本，避免重複抽取
+        for (let i = weightedList.length - 1; i >= 0; i--) {
+            if (weightedList[i] === selectedWord) {
+                weightedList.splice(i, 1);
+            }
+        }
+    }
+
+    return drawnWords;
 }
 
 /**
@@ -296,6 +332,7 @@ function checkAnswer(button, correctAnswer) {
         // 找到正確答案的按鈕並標記
         document.querySelector(`.option-button[data-answer="${correctAnswer}"]`).classList.add('correct');
         
+        // 記錄錯誤
         mistakes.push(currentWord);
     }
     
@@ -330,6 +367,7 @@ function checkFillInAnswer(correctAnswer) {
         feedback.className = 'feedback incorrect';
         input.classList.add('wrong');
         
+        // 記錄錯誤
         mistakes.push(currentWord);
     }
     
@@ -380,8 +418,8 @@ function finishQuiz() {
 }
 
 /**
- * 將結果 POST 給 Google Apps Script (GAS) 進行數據寫入與更新
- * *** 採用 CORS 優化版本 (移除 Content-Type 標頭以避免預檢失敗) ***
+ * 將結果以 GET 請求發送給 Google Apps Script (GAS) 進行數據寫入
+ * *** 採用 GET 模式繞過 CORS 預檢問題 ***
  */
 async function postResultsToGAS(percentage, totalTime) {
     const historyData = {
@@ -392,43 +430,44 @@ async function postResultsToGAS(percentage, totalTime) {
         range: `${document.getElementById('rangeStart').value || 1}-${document.getElementById('rangeEnd').value || allWords.length}`
     };
 
-    const dataToSend = {
-        history: historyData,
-        // 只傳遞核心數據給 GAS
-        mistakes: mistakes.map(m => ({
-            index: m.index,
-            english: m.english,
-            pos: m.pos,
-            chinese: m.chinese,
-        })),
-        // 傳遞所有單字的答對/錯狀態，用於更新連對計數
-        allWords: quizQueue.map(q => ({
-            index: q.index,
-            is_correct: q.is_correct
-        }))
-    };
+    const simplifiedMistakes = mistakes.map(m => ({
+        index: m.index,
+        english: m.english,
+        pos: m.pos,
+        chinese: m.chinese,
+    }));
     
-    const dataString = JSON.stringify(dataToSend);
+    const correctIndices = quizQueue
+        .filter(q => q.is_correct)
+        .map(q => q.index)
+        .join(','); 
+    
+    const params = new URLSearchParams();
+    params.append('action', 'log_result'); // 告知 GAS 執行寫入邏輯
+    params.append('history', JSON.stringify(historyData));
+    params.append('mistakes', JSON.stringify(simplifiedMistakes)); 
+    params.append('corrects', correctIndices); 
+    
+    const fetchUrl = `${CONFIG.GAS_URL}?${params.toString()}`;
 
     try {
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
+        // 發送 GET 請求 (不帶任何複雜標頭)
+        const response = await fetch(fetchUrl, {
+            method: 'GET',
             mode: 'cors',
-            cache: 'no-cache',
-            // !!! 關鍵優化: 移除 Content-Type 標頭以避免 CORS 預檢 !!!
-            body: dataString 
+            cache: 'no-cache'
         });
 
-        // 即使 GAS 設置了 JSON 回傳，我們仍使用 response.text() 確保解析容錯
+        // 雖然 GAS 回傳的是 MimeType.TEXT，但內容是 JSON 字串
         const responseText = await response.text();
         const result = JSON.parse(responseText); 
-
+        
         if (result.status === 'success') {
-            console.log("✅ 結果上傳成功！GAS 已更新您的紀錄。");
+            console.log("✅ 結果上傳成功 (GET 模式)！");
         } else {
             console.error("❌ 結果上傳失敗 (GAS Error):", result.message);
+            alert("資料上傳失敗：" + result.message);
         }
-
     } catch (error) {
         console.error("❌ 發送請求到 GAS 失敗:", error);
         alert("資料上傳到 Google Sheets 失敗，請檢查瀏覽器控制台錯誤。");

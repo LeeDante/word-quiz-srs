@@ -4,94 +4,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>間隔複習單字測驗機</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
+        .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        .hidden { display: none; }
+        h1 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        /* 配置畫面樣式 */
+        .config-group { margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="number"], input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .ratio-buttons button { margin-right: 5px; padding: 8px 12px; cursor: pointer; background-color: #e0e0e0; border: none; border-radius: 4px; }
+        .ratio-buttons button:hover { background-color: #ccc; }
+        
+        #startQuiz { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 20px; }
+        #startQuiz:hover { background-color: #0056b3; }
+
+        /* 測驗畫面樣式 */
+        .quiz-box { border: 2px solid #007bff; padding: 20px; border-radius: 8px; text-align: center; margin-top: 10px; }
+        .quiz-question { font-size: 1.2em; margin-bottom: 20px; }
+        .options-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .option-button, .submit-button { padding: 10px; font-size: 1em; cursor: pointer; border: 1px solid #007bff; background-color: #f0f8ff; border-radius: 4px; transition: background-color 0.3s; }
+        .option-button:hover:not(:disabled) { background-color: #cce0ff; }
+        .option-button.correct { background-color: #28a745; color: white; border-color: #28a745; }
+        .option-button.wrong { background-color: #dc3545; color: white; border-color: #dc3545; }
+        
+        .fill-in-input { padding: 10px; font-size: 1em; margin-bottom: 10px; }
+        .feedback { margin-top: 10px; font-weight: bold; }
+        .feedback.correct { color: #28a745; }
+        .feedback.incorrect { color: #dc3545; }
+
+        /* 結果畫面樣式 */
+        .results-summary { background-color: #e9ecef; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .results-summary p { margin: 5px 0; }
+        #mistakeList { list-style-type: none; padding: 0; }
+        #mistakeList li { background-color: #fff3f3; padding: 8px; margin-bottom: 5px; border-left: 5px solid #dc3545; }
+        #restartQuiz { background-color: #6c757d; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 20px; }
+        #restartQuiz:hover { background-color: #5a6268; }
+    </style>
 </head>
 <body>
-
-    <header>
+    <div class="container">
         <h1>間隔複習單字測驗機</h1>
-        <div id="loader-status">正在載入題庫...</div>
-    </header>
+        <p id="status">初始化中...</p>
 
-    <main>
-        <section id="quiz-settings" class="container hidden">
-            <h2>📝 測驗設定</h2>
+        <div id="configScreen">
             
-            <label for="sheetUrl">Google Sheets CSV 連結：</label>
-            <input type="url" id="sheetUrl" placeholder="請貼上發布為CSV的試算表連結" required disabled>
-            
-            <div id="word-count-info"></div>
-
-            <label for="rangeStart">序號範圍:</label>
-            <div class="range-inputs">
+            <div class="config-group">
+                <label for="rangeStart">單字範圍 (起始序號):</label>
                 <input type="number" id="rangeStart" value="1" min="1">
-                到
-                <input type="number" id="rangeEnd" value="50" min="1">
+                
+                <label for="rangeEnd">單字範圍 (結束序號):</label>
+                <input type="number" id="rangeEnd" value="20" min="1">
             </div>
 
-            <label for="quizCount">出題數：</label>
-            <input type="number" id="quizCount" value="10" min="1">
-
-            <label>題型比例 (%):</label>
-            <div id="ratio-presets" style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <button type="button" data-ratio="70">平衡練習 (70/30)</button>
-                <button type="button" data-ratio="50">強化記憶 (50/50)</button>
-                <button type="button" data-ratio="0">輸出專攻 (0/100)</button>
+            <div class="config-group">
+                <label for="wordCount">測驗單字數量:</label>
+                <input type="number" id="wordCount" value="20" min="1">
             </div>
-            
-            <input type="range" id="selectionRatio" min="0" max="100" value="70">
-            <span id="ratioDisplay">70% 選擇題 / 30% 填空題</span>
-            <button id="startQuizBtn" disabled>開始測驗</button>
-        </section>
 
-        <section id="quiz-area" class="container hidden">
-            <div id="quiz-header">
-                <span id="timer">時間: 00:00</span> |
-                <span id="progress">第 1 題 / 共 10 題</span>
-                <button id="pauseBtn">暫停</button>
-            </div>
-            
-            <h3 id="question-text"></h3>
-            
-            <div id="choices-container" class="options hidden">
+            <div class="config-group">
+                <label for="selectionRatio">選擇題比例 (%):</label>
+                <input type="number" id="selectionRatio" value="70" min="0" max="100">
+                <div class="ratio-buttons" style="margin-top: 10px;">
+                    <button id="ratio70">70%</button>
+                    <button id="ratio50">50%</button>
+                    <button id="ratio10">10%</button>
                 </div>
-
-            <div id="fillin-container" class="options hidden">
-                <input type="text" id="fillin-answer" placeholder="請輸入英文單字 (忽略大小寫)">
-                <button id="submitFillin">送出</button>
-                <p id="feedback" class="feedback-text"></p>
             </div>
-        </section>
 
-        <section id="result-area" class="container hidden">
+            <button id="startQuiz">🚀 開始測驗</button>
+        </div>
+
+        <div id="quizScreen" class="hidden">
+            <p>題號: <span id="quizCounter">0 / 0</span></p>
+            <div id="quizContainer">
+                </div>
+        </div>
+
+        <div id="resultsScreen" class="hidden">
             <h2>🎉 測驗結果</h2>
-            <p>分數：<span id="final-score"></span></p>
-            <p>用時：<span id="final-time"></span></p>
-            
-            <h3>錯題回顧</h3>
-            <div id="mistake-review">
-                </div>
-            
-            <button id="restartBtn">再測一次</button>
-            
-            <hr>
-            
-            <h2>歷史紀錄 (近 10 次)</h2>
-            <table id="history-table">
-                <thead>
-                    <tr>
-                        <th>分數</th>
-                        <th>用時</th>
-                        <th>方式</th>
-                        <th>題數</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    </tbody>
-            </table>
-        </section>
-    </main>
-    
+            <div class="results-summary">
+                <p>分數: <span id="finalScore"></span></p>
+                <p>總耗時: <span id="finalTime"></span></p>
+                <p>題型分佈: <span id="finalType"></span></p>
+            </div>
+
+            <h3>錯題回顧:</h3>
+            <ul id="mistakeList">
+                </ul>
+
+            <button id="restartQuiz">🔄 重新配置測驗</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

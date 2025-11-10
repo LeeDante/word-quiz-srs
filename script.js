@@ -5,7 +5,7 @@ const CONFIG = {
     // 您的 Google Sheets CSV 連結 (用於讀取題庫)
     CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTrY-NhkZX1dladhpRtEUpQmgbVq3qgpuGcDH0ZCuZzfp9k8eCY7228ctr-qgh6ETm6eskomrawZTQ6/pub?gid=0&single=true&output=csv",
     // 您的 Google Apps Script Web App URL (用於寫入結果)
-    GAS_URL: "https://script.google.com/macros/s/AKfycbweheTbhyw1dewowqBZg1ARubxgt2_aXoNqaqhMVYpYco3O1hrzGnQEE63hWELsslAu/exec",
+    GAS_URL: "https://script.google.com/macros/s/AKfycbxFTGVscrLa2aN0kIVcw_6XwoiJFMaHqzZdz1v6hkfuiq3Y1Co-esICzcl4XRAJjZOu/exec",
     // 權重乘數 (A:新單字, B:常錯字, C:復習字, D:已掌握字)
     WEIGHTS: { new: 3, high_mistake: 5, low_mistake: 2, mastered: 1 },
     // 連續答對幾次視為掌握
@@ -600,5 +600,6 @@ function initialize() {
     // 啟動數據載入
     loadWordList();
 }
+
 
 initialize();

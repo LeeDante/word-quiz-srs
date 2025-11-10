@@ -1,6 +1,5 @@
 // =================================================================
-// 核心腳本: 單字測驗機 (最終修正版 - 針對新 HTML 結構編寫)
-// 功能: 修正出題邏輯、排版 ID 對齊、GET 模式數據傳輸
+// 核心腳本: 單字測驗機 (最終修正版 - 解決所有 ID 錯誤和邏輯缺陷)
 // =================================================================
 
 // 配置區塊
@@ -29,33 +28,43 @@ let totalSeconds = 0;       // 測驗總時間
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 初始狀態：禁用開始按鈕，顯示載入
-    const startBtn = document.getElementById('startQuizBtn');
-    if (startBtn) startBtn.disabled = true;
-
-    // 綁定事件
-    document.getElementById('startQuizBtn')?.addEventListener('click', startQuiz);
-    document.getElementById('restartBtn')?.addEventListener('click', resetToConfig);
-    document.getElementById('selectionRatio')?.addEventListener('input', updateRatioDisplay);
-    document.getElementById('submitFillin')?.addEventListener('click', checkFillInAnswerWrapper);
-    document.getElementById('fillin-answer')?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') checkFillInAnswerWrapper();
-    });
+    // 修正 S1, S2: 根據您的 HTML 結構綁定事件和設置 ID
     
-    // 綁定比例預設按鈕 (只需觸發滑桿)
+    // 設置預設比例並初始化顯示
+    const ratioSlider = document.getElementById('selectionRatio');
+    if (ratioSlider) {
+        ratioSlider.value = CONFIG.DEFAULT_SELECTION_RATIO;
+        ratioSlider.addEventListener('input', updateRatioDisplay);
+    }
+    updateRatioDisplay();
+
+    // S1 修正: 綁定正確的開始按鈕 ID: 'startQuizBtn' (而非 'startQuiz')
+    document.getElementById('startQuizBtn')?.addEventListener('click', startQuiz);
+    
+    // 綁定重新開始按鈕 (HTML: restartBtn)
+    document.getElementById('restartBtn')?.addEventListener('click', resetToConfig);
+    
+    // 綁定比例預設按鈕 (HTML: #ratio-presets button, S2 修正)
     document.querySelectorAll('#ratio-presets button').forEach(button => {
         button.addEventListener('click', (e) => {
             const ratio = parseInt(e.target.dataset.ratio);
-            const slider = document.getElementById('selectionRatio');
-            if (slider) {
-                slider.value = ratio;
+            if (ratioSlider) {
+                ratioSlider.value = ratio;
                 updateRatioDisplay();
             }
         });
     });
 
+    // 填空題輸入事件 (HTML: fillin-answer, submitFillin)
+    document.getElementById('submitFillin')?.addEventListener('click', checkFillInAnswerWrapper);
+    document.getElementById('fillin-answer')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') checkFillinAnswerWrapper();
+    });
+
     loadWords();
-    updateRatioDisplay(); // 初始顯示比例
+    
+    // 初始狀態顯示
+    document.getElementById('loader-status').textContent = '載入中...';
 });
 
 /**
@@ -76,14 +85,16 @@ function updateRatioDisplay() {
  */
 async function loadWords() {
     const statusDiv = document.getElementById('loader-status');
+    const startBtn = document.getElementById('startQuizBtn');
+    
     try {
         const response = await fetch(CONFIG.CSV_URL);
         const csvText = await response.text();
         allWords = parseCSV(csvText);
         
         const countInfoDiv = document.getElementById('word-count-info');
-        const startBtn = document.getElementById('startQuizBtn');
         const rangeEndInput = document.getElementById('rangeEnd');
+        const quizCountInput = document.getElementById('quizCount');
 
         if (allWords.length > 0) {
             statusDiv.textContent = `✅ 題庫載入成功！共 ${allWords.length} 個單字。`;
@@ -94,8 +105,10 @@ async function loadWords() {
                 rangeEndInput.value = allWords.length;
                 rangeEndInput.max = allWords.length;
             }
-            document.getElementById('quizCount').max = allWords.length;
-            document.getElementById('quizCount').value = Math.min(20, allWords.length);
+            if (quizCountInput) {
+                quizCountInput.max = allWords.length;
+                quizCountInput.value = Math.min(20, allWords.length);
+            }
 
             if (startBtn) startBtn.disabled = false;
             document.getElementById('quiz-settings')?.classList.remove('hidden');
@@ -110,21 +123,18 @@ async function loadWords() {
 }
 
 /**
- * 解析 CSV 字串為單字物件陣列 (P6 修正: 增強魯棒性)
+ * 解析 CSV 字串為單字物件陣列 (P6 增強魯棒性)
  */
 function parseCSV(csv) {
-    // 簡單的 CSV 解析，假設結構為 英文, 中文, 詞性, 序號
     const lines = csv.trim().split('\n');
     if (lines.length <= 1) return [];
 
     const words = [];
     for (let i = 1; i < lines.length; i++) {
-        // 使用正則表達式處理逗號分隔和引號內容
         const columns = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
         
         if (columns.length >= 4) {
-             // 清理引號
-            const clean = (str) => str ? str.trim().replace(/^"|"$/g, '').trim() : '';
+             const clean = (str) => str ? str.trim().replace(/^"|"$/g, '').trim() : '';
             
             words.push({
                 index: parseInt(clean(columns[3])) || i,       // 序號 (D欄)
@@ -165,7 +175,7 @@ function startQuiz() {
     if (count < filteredWords.length) {
         selectedWords = drawWords(filteredWords, count);
     }
-
+    
     // 初始化測驗隊列
     quizQueue = selectedWords.map(word => ({
         ...word,
@@ -189,7 +199,7 @@ function startQuiz() {
 }
 
 /**
- * 依據錯誤次數加權抽取單字
+ * 依據錯誤次數加權抽取單字 (S4 修正: 使用 Set 提升效率)
  */
 function drawWords(words, count) {
     if (words.length <= count) return words;
@@ -197,36 +207,33 @@ function drawWords(words, count) {
     const weightedList = [];
     const minMistakes = Math.min(...words.map(w => w.mistakes)); 
     
+    // 1. 建立加權列表
     words.forEach(word => {
-        // 確保至少有 1 的權重
         const weight = 1 + (word.mistakes - minMistakes); 
         for (let i = 0; i < weight; i++) {
             weightedList.push(word);
         }
     });
 
-    // 隨機抽取不重複單字
-    const uniqueDrawnWords = new Set();
+    // 2. 隨機抽取不重複單字
+    const uniqueDrawnIndices = new Set();
     const drawnWords = [];
     
-    // 使用 Set 確保抽取出的單字物件是唯一的
     while (drawnWords.length < count && weightedList.length > 0) {
         const randomIndex = Math.floor(Math.random() * weightedList.length);
         const selectedWord = weightedList[randomIndex];
         
-        // 使用序號作為唯一性標識
-        if (!uniqueDrawnWords.has(selectedWord.index)) {
-            uniqueDrawnWords.add(selectedWord.index);
+        // 使用 word.index 作為唯一性標識，確保單字不重複
+        if (!uniqueDrawnIndices.has(selectedWord.index)) {
+            uniqueDrawnIndices.add(selectedWord.index);
             drawnWords.push(selectedWord);
         }
         
-        // 為了效率，可以從 weightedList 移除該元素，但在 JS 中遍歷移除較慢，
-        // 保持現有邏輯，依靠 Set 篩選即可。
+        // 為了避免再次選到同一個物件，直接從加權列表中移除它
         weightedList.splice(randomIndex, 1);
     }
-
-    // 如果加權列表耗盡但數量不足 (不太可能)，則返回所有已抽取的
-    return drawnWords.slice(0, count);
+    
+    return drawnWords;
 }
 
 /**
@@ -251,7 +258,7 @@ function showNextQuiz() {
 
     const word = quizQueue[currentQuizIndex];
     
-    // 更新進度條
+    // 更新進度條 (HTML: progress)
     document.getElementById('progress').textContent = `第 ${currentQuizIndex + 1} 題 / 共 ${quizQueue.length} 題`;
     document.getElementById('question-text').textContent = `(${word.pos}) ${word.chinese}`;
     document.getElementById('feedback').textContent = ''; // 清除回饋
@@ -291,19 +298,20 @@ function renderSelectionQuiz(word, container) {
 }
 
 /**
- * 產生選擇題選項 (P5 修正: 確保選項不重複)
+ * 產生選擇題選項 (S3 修正: 確保選項不重複)
  */
 function generateSelectionOptions(correctWord) {
     const options = [];
-    const optionSet = new Set(); 
+    const optionSet = new Set(); // 使用 Set 確保唯一性
 
     // 1. 加入正確答案
-    const cleanCorrectWord = { ...correctWord, english: correctWord.english.trim() };
-    options.push(cleanCorrectWord);
-    optionSet.add(cleanCorrectWord.english);
+    const cleanCorrectEnglish = correctWord.english.trim();
+    options.push({ ...correctWord, english: cleanCorrectEnglish });
+    optionSet.add(cleanCorrectEnglish.toLowerCase()); // 轉換為小寫來檢查唯一性
 
     // 2. 過濾所有非正確答案的單字
-    const allIncorrectOptions = allWords.filter(w => w.english.trim() !== cleanCorrectWord.english);
+    // 確保只從英文單字不同的詞條中抽取選項
+    const allIncorrectOptions = allWords.filter(w => w.english.trim().toLowerCase() !== cleanCorrectEnglish.toLowerCase());
     shuffleArray(allIncorrectOptions);
 
     // 3. 抽取最多 3 個不重複的錯誤答案
@@ -313,9 +321,10 @@ function generateSelectionOptions(correctWord) {
         
         const cleanEnglish = word.english.trim();
         
-        if (!optionSet.has(cleanEnglish)) {
+        // 檢查這個詞是否已經被選入 (不論大小寫)
+        if (!optionSet.has(cleanEnglish.toLowerCase())) {
             options.push({ ...word, english: cleanEnglish });
-            optionSet.add(cleanEnglish);
+            optionSet.add(cleanEnglish.toLowerCase());
             incorrectCount++;
         }
     }
@@ -325,6 +334,7 @@ function generateSelectionOptions(correctWord) {
     
     return options;
 }
+
 
 /**
  * 渲染填空題
@@ -345,7 +355,7 @@ function renderFillInQuiz(word) {
  */
 function checkAnswer(button, correctAnswer) {
     const selectedAnswer = button.getAttribute('data-answer');
-    const isCorrect = selectedAnswer === correctAnswer;
+    const isCorrect = selectedAnswer.toLowerCase() === correctAnswer.toLowerCase(); // 忽略大小寫比較
     
     const feedback = document.getElementById('feedback');
     const currentWord = quizQueue[currentQuizIndex];
@@ -365,7 +375,9 @@ function checkAnswer(button, correctAnswer) {
         button.classList.add('wrong');
         
         // 找到正確答案的按鈕並標記
-        const correctButton = document.querySelector(`.option-button[data-answer="${correctAnswer}"]`);
+        const correctButton = Array.from(document.querySelectorAll('.option-button'))
+            .find(btn => btn.getAttribute('data-answer').toLowerCase() === correctAnswer.toLowerCase());
+            
         if (correctButton) correctButton.classList.add('correct');
         
         mistakes.push(currentWord);
@@ -424,7 +436,7 @@ function startTimer() {
     totalSeconds = 0;
     const timerElement = document.getElementById('timer');
     
-    clearInterval(timerInterval); // 清除任何現有的計時器
+    clearInterval(timerInterval); 
 
     timerInterval = setInterval(() => {
         totalSeconds++;
@@ -454,14 +466,14 @@ function finishQuiz() {
     const percentage = ((correctCount / totalCount) * 100).toFixed(0);
     const quizType = `${quizTypeCounts.selection}/${quizTypeCounts.fillIn}`;
     
-    // 顯示結果畫面
+    // 顯示結果畫面 (HTML: result-area, quiz-area)
     document.getElementById('quiz-area')?.classList.add('hidden');
     document.getElementById('result-area')?.classList.remove('hidden');
 
     document.getElementById('final-score').textContent = `${correctCount} / ${totalCount} (${percentage}%)`;
     document.getElementById('final-time').textContent = `${timeSpent} 秒`;
     
-    // 顯示錯題清單
+    // 顯示錯題清單 (HTML: mistake-review)
     const mistakeReview = document.getElementById('mistake-review');
     if (mistakeReview) {
         mistakeReview.innerHTML = mistakes.length > 0
@@ -525,7 +537,6 @@ async function postResultsToGAS(percentage, totalTime) {
         
         if (result.status === 'success') {
             console.log("✅ 結果上傳成功 (GET 模式)！");
-            // 這裡可以加入刷新歷史表格的邏輯，但需要 GAS 增加讀取歷史數據的功能。
         } else {
             console.error("❌ 結果上傳失敗 (GAS Error):", result.message);
         }

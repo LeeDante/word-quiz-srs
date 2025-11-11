@@ -43,33 +43,42 @@ async function init() {
 // --- 測驗流程函式 ---
 
 function setupEventListeners() {
-    // 假設有一個 ID 為 'start-quiz-btn' 的按鈕
+    // 修正: 確保所有按鈕的 ID 都能被正確監聽
     document.getElementById('start-quiz-btn').addEventListener('click', startQuiz);
     document.getElementById('submit-answer-btn').addEventListener('click', handleSubmission);
     document.getElementById('next-question-btn').addEventListener('click', advanceToNextQuestion);
-    // ... 其他按鈕事件
+    document.getElementById('view-history-btn').addEventListener('click', UI.renderHistoryView); // 查看歷史紀錄
+    document.getElementById('back-to-setup-btn').addEventListener('click', () => UI.showView('setup-view')); // 返回設定
+    document.getElementById('start-new-quiz-btn').addEventListener('click', () => UI.showView('setup-view')); // 再測一次
+    document.getElementById('review-errors-btn').addEventListener('click', () => UI.renderHistoryView(true)); // 查看錯誤清單
 }
 
 function startQuiz() {
-    // 1. 取得使用者設定 (需從 UI 元素中讀取)
+    // 修正: 從 UI 元素中讀取真實的使用者設定
     const settings = {
-        startID: 1, // 假設值
-        endID: 100, // 假設值
-        count: 30,  // 假設值
-        level: 'A'  // 假設值
+        startID: parseInt(document.getElementById('id-start').value), 
+        endID: parseInt(document.getElementById('id-end').value), 
+        count: parseInt(document.getElementById('quiz-count').value), // 讀取實際題數
+        level: document.getElementById('level-select').value 
     };
+    
+    // 確保題數有效
+    if (isNaN(settings.count) || settings.count < 1) {
+        alert("請輸入有效的測驗題數！");
+        return;
+    }
     
     // 2. 生成題目列表
     quizList = QuizGenerator.generateQuizList(settings, allVocab, errorLog);
     
     if (quizList.length === 0) {
-        alert("無法生成測驗題目，請檢查您的設定範圍。");
+        alert("無法生成測驗題目，請檢查您的設定範圍或單字庫數量。");
         return;
     }
     
     // 3. 初始化並啟動
     currentQuestionIndex = 0;
-    HistoryManager.startSession(quizList.length, settings.level);
+    HistoryManager.startSession(quizList.length, settings.level); // 使用 quizList.length
     UI.startTimer();
     UI.showView('quiz-view');
     renderCurrentQuestion();
@@ -77,15 +86,27 @@ function startQuiz() {
 
 function renderCurrentQuestion() {
     const question = quizList[currentQuestionIndex];
-    const settings = { level: HistoryManager.quizSessionData.level }; // 假設可以這樣取得 level
+    const settings = { level: HistoryManager.quizSessionData.level };
     
-    // 這裡需要將 quiz-generator 的選擇題邏輯整合進 UI.renderQuestion
-    const isChineseToEnglish = ['A', 'B', 'C'].includes(settings.level); // 僅 D 級為特殊題型
-    const options = (settings.level !== 'C' && settings.level !== 'D') ? 
-        QuizGenerator.generateMultipleChoice(question, allVocab, isChineseToEnglish) : 
-        null;
+    let options = null;
+    const isChineseToEnglish = ['B', 'C'].includes(settings.level); 
+    
+    // 判斷是否為選擇題 (A/B級的選擇部分)
+    // 假設 A/B 級中 70% 是選擇題 (0.7)，30% 是拼字題 (0.3)
+    const isMultipleChoice = (settings.level === 'A' || settings.level === 'B') && Math.random() < 0.7; 
 
-    UI.renderQuestion(question, currentQuestionIndex + 1, quizList.length, allVocab, settings.level, options);
+    if (isMultipleChoice) {
+        options = QuizGenerator.generateMultipleChoice(question, allVocab, isChineseToEnglish);
+    }
+    
+    // 呼叫 UI 渲染
+    UI.renderQuestion(
+        question, 
+        currentQuestionIndex + 1, 
+        quizList.length, 
+        settings.level, 
+        options // 傳遞選項
+    );
 }
 
 function handleSubmission() {

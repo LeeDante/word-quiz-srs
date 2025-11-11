@@ -38,22 +38,52 @@ export function showView(viewId) {
 // ... (以下為介面渲染和互動的 Placeholder 函式) ...
 
 /** 渲染測驗畫面 */
-export function renderQuestion(questionData, index, total, vocabList, level) {
-    // 渲染進度 (index/total)
-    // 渲染題目 (questionData.Chinese/English)
+export function renderQuestion(questionData, index, total, level, options) { // 修正參數列表
+    const questionTextElement = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const inputField = document.getElementById('user-input-field');
+    const progressDisplay = document.getElementById('progress-display');
+
+    // 1. 更新進度顯示
+    progressDisplay.textContent = `進度: ${index}/${total}`;
     
-    // 根據 level 判斷題型 (選擇題/拼字題)
-    if (['A', 'B'].includes(level) && (Math.random() > 0.3 || (level === 'B' && Math.random() < 0.3))) {
-        // 渲染選擇題 (需要調用 generateMultipleChoice)
-        // ...
+    // 2. 判斷題型和渲染題目文字
+    const isChineseToEnglish = ['B', 'C'].includes(level);
+    const isSpelling = (options === null); // 根據 options 是否存在判斷是選擇題還是拼字題
+
+    if (isChineseToEnglish) {
+        questionTextElement.textContent = questionData.Chinese; // 顯示中文，考英文
     } else {
-        // 渲染拼字題 (輸入框)
-        // ...
+        questionTextElement.textContent = questionData.English; // 顯示英文，考中文或拼字
+    }
+
+    // 3. 渲染答案區
+    optionsContainer.innerHTML = ''; // 清空選項區
+    inputField.value = ''; // 清空輸入框
+    inputField.style.display = 'none';
+
+    if (isSpelling) {
+        // 拼字題 (C, D 級，或 A/B 級的拼字部分)
+        inputField.style.display = 'block';
+    } else {
+        // 選擇題 (A/B 級的選擇部分)
+        options.forEach((optionText, i) => {
+            const button = document.createElement('button');
+            button.className = 'option-btn';
+            button.textContent = `${String.fromCharCode(65 + i)}. ${optionText}`; // 顯示 A. B. C. D.
+            button.setAttribute('data-value', optionText);
+            button.addEventListener('click', (e) => {
+                // 自動填寫答案到輸入框並提交 (模擬選擇)
+                inputField.value = e.target.getAttribute('data-value');
+                document.getElementById('submit-answer-btn').click(); 
+            });
+            optionsContainer.appendChild(button);
+        });
     }
     
     // 設置按鈕狀態
-    DOM.submitButton.style.display = 'block';
-    DOM.nextButton.style.display = 'none';
+    document.getElementById('submit-answer-btn').style.display = 'block';
+    document.getElementById('next-question-btn').style.display = 'none';
     DOM.feedbackArea.innerHTML = '';
 }
 

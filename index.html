@@ -1,97 +1,101 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>間隔複習單字測驗機</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文單字測驗網站 - 模組化範例</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <header>
-        <h1>間隔複習單字測驗機</h1>
-        <div id="loader-status">正在載入題庫...</div>
-    </header>
+    <header>
+        <h1>📖 智慧單字複習系統</h1>
+        <div id="sync-status-area" class="sync-none">載入中...</div>
+    </header>
 
-    <main>
-        <section id="quiz-settings" class="container hidden">
-            <h2>📝 測驗設定</h2>
-            
-            <label for="sheetUrl">Google Sheets CSV 連結：</label>
-            <input type="url" id="sheetUrl" placeholder="請貼上發布為CSV的試算表連結" required disabled>
-            
-            <div id="word-count-info"></div>
+    <main id="app-main">
 
-            <label for="rangeStart">序號範圍:</label>
-            <div class="range-inputs">
-                <input type="number" id="rangeStart" value="1" min="1">
-                到
-                <input type="number" id="rangeEnd" value="50" min="1">
-            </div>
+        <section id="setup-view" class="view">
+            <h2>測驗設定</h2>
+            <div class="setting-group">
+                <label for="level-select">測驗級別：</label>
+                <select id="level-select">
+                    <option value="A">A 級 (英中選擇/拼字)</option>
+                    <option value="B">B 級 (中英選擇/拼字)</option>
+                    <option value="C">C 級 (英翻中/拼字)</option>
+                    <option value="D">D 級 (聽發音/拼字)</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="id-start">ID 範圍：</label>
+                <input type="number" id="id-start" value="1" min="1" max="9999" aria-label="起始 ID">
+                <span>至</span>
+                <input type="number" id="id-end" value="100" min="1" max="9999" aria-label="結束 ID">
+            </div>
 
-            <label for="quizCount">出題數：</label>
-            <input type="number" id="quizCount" value="10" min="1">
+            <div class="setting-group">
+                <label for="quiz-count">測驗題數：</label>
+                <input type="number" id="quiz-count" value="30" min="5" max="100" aria-label="測驗數量">
+            </div>
+            
+            <button id="start-quiz-btn" class="btn-primary">開始測驗</button>
+            <button id="view-history-btn" class="btn-secondary">查看歷史紀錄 (2.7)</button>
+        </section>
 
-            <label>題型比例 (%):</label>
-            <div id="ratio-presets" style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <button type="button" data-ratio="70">平衡練習 (70/30)</button>
-                <button type="button" data-ratio="50">強化記憶 (50/50)</button>
-                <button type="button" data-ratio="0">輸出專攻 (0/100)</button>
-            </div>
-            
-            <input type="range" id="selectionRatio" min="0" max="100" value="70">
-            <span id="ratioDisplay">70% 選擇題 / 30% 填空題</span>
-            <button id="startQuizBtn" disabled>開始測驗</button>
-        </section>
+        <section id="quiz-view" class="view" style="display: none;">
+            <div id="quiz-header">
+                <span id="timer-display">時間: 00:00</span>
+                <span id="progress-display">進度: 0/30</span>
+            </div>
 
-        <section id="quiz-area" class="container hidden">
-            <div id="quiz-header">
-                <span id="timer">時間: 00:00</span> |
-                <span id="progress">第 1 題 / 共 10 題</span>
-                <button id="pauseBtn">暫停</button>
-            </div>
-            
-            <h3 id="question-text"></h3>
-            
-            <div id="choices-container" class="options hidden">
-                </div>
+            <div id="question-area">
+                <h3 id="question-text">題目內容</h3>
+                <div id="audio-placeholder"></div> </div>
 
-            <div id="fillin-container" class="options hidden">
-                <input type="text" id="fillin-answer" placeholder="請輸入英文單字 (忽略大小寫)">
-                <button id="submitFillin">送出</button>
-                <p id="feedback" class="feedback-text"></p>
-            </div>
-        </section>
+            <div id="answer-area">
+                <div id="options-container">
+                    </div>
+                <input type="text" id="user-input-field" placeholder="請輸入您的答案">
+            </div>
 
-        <section id="result-area" class="container hidden">
-            <h2>🎉 測驗結果</h2>
-            <p>分數：<span id="final-score"></span></p>
-            <p>用時：<span id="final-time"></span></p>
-            
-            <h3>錯題回顧</h3>
-            <div id="mistake-review">
-                </div>
-            
-            <button id="restartBtn">再測一次</button>
-            
-            <hr>
-            
-            <h2>歷史紀錄 (近 10 次)</h2>
-            <table id="history-table">
-                <thead>
-                    <tr>
-                        <th>分數</th>
-                        <th>用時</th>
-                        <th>方式</th>
-                        <th>題數</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    </tbody>
-            </table>
-        </section>
-    </main>
-    
-    <script src="script.js"></script>
+            <div id="feedback-area">
+                </div>
+            
+            <div id="quiz-controls">
+                <button id="submit-answer-btn" class="btn-primary">提交答案</button>
+                <button id="next-question-btn" class="btn-secondary" style="display: none;">下一題</button>
+            </div>
+        </section>
+        
+        <section id="result-view" class="view" style="display: none;">
+            <h2>測驗結果</h2>
+            <div id="result-summary" class="summary-box">
+                </div>
+            <button id="review-errors-btn" class="btn-secondary">查看錯誤清單 (2.6)</button>
+            <button id="start-new-quiz-btn" class="btn-primary">再測一次</button>
+        </section>
+
+        <section id="history-view" class="view" style="display: none;">
+            <h2>歷史紀錄與訂正</h2>
+            <div id="history-list">
+                </div>
+            <div id="error-review-list">
+                 </div>
+            <button id="back-to-setup-btn" class="btn-secondary">返回設定</button>
+        </section>
+
+    </main>
+
+    <script type="module" src="data-loader.js"></script>
+
+    <script type="module" src="quiz-generator.js"></script>
+
+    <script type="module" src="quiz-ui.js"></script>
+
+    <script type="module" src="history-manager.js"></script>
+
+    <script type="module" src="main.js"></script>
+
 </body>
 </html>

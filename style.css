@@ -1,165 +1,218 @@
+/* --- 基礎 Reset 與排版 (Mobile-First) --- */
 :root {
-    /* 詞性顏色定義 */
-    --color-noun: #2ecc71;    /* 綠色 */
-    --color-verb: #3498db;    /* 藍色 */
-    --color-adj: #e74c3c;     /* 紅色 */
-    --color-adv: #f39c12;     /* 黃色 */
-    --color-other: #9b59b6;   /* 紫色 */
-    
-    --color-primary: #34495e; /* 主要文字 */
-    --color-bg: #ecf0f1;      /* 背景 */
+    --color-primary: #007bff;     /* 主色調：藍色 */
+    --color-secondary: #6c757d;   /* 次要色：灰色 */
+    --color-success: #28a745;     /* 成功色：綠色 */
+    --color-error: #dc3545;       /* 錯誤色：紅色 */
+    --color-warning: #ffc107;     /* 提醒色：黃色 */
+    --color-background: #f8f9fa;  /* 背景色 */
+    --color-card: #ffffff;        /* 卡片色 */
+    --font-family: 'Arial', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background-color: var(--color-bg);
-    color: var(--color-primary);
-    margin: 0;
-    padding: 20px;
-}
-
-.container {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-family: var(--font-family);
+    background-color: var(--color-background);
+    color: #343a40;
+    line-height: 1.6;
+    padding: 0 10px;
 }
 
 header {
-    text-align: center;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #ccc;
-}
-
-/* 詞性標註樣式 */
-.pos-tag {
-    font-weight: bold;
-    margin-left: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    color: white;
-    display: inline-block;
-    font-size: 0.9em;
-}
-
-/* 詞性顏色對應 */
-.pos-n { background-color: var(--color-noun); }
-.pos-v { background-color: var(--color-verb); }
-.pos-adj { background-color: var(--color-adj); }
-.pos-adv { background-color: var(--color-adv); }
-.pos-oth { background-color: var(--color-other); }
-
-/* 輸入與按鈕 */
-input[type="number"], input[type="url"], input[type="text"], button {
-    padding: 10px;
-    margin-top: 5px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-    width: 100%; /* 確保手機上全寬 */
-}
-
-button {
-    cursor: pointer;
     background-color: var(--color-primary);
     color: white;
-    border: none;
-    transition: background-color 0.3s;
-}
-
-button:hover:not(:disabled) {
-    background-color: #5d6d7e;
-}
-
-button:disabled {
-    background-color: #bdc3c7;
-    cursor: not-allowed;
-}
-
-.range-inputs {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.range-inputs input {
-    width: calc(50% - 5px);
-}
-
-.options button {
-    margin-bottom: 8px;
-    text-align: left;
-    background-color: #f4f4f4;
-    color: var(--color-primary);
-    border: 1px solid #ddd;
-}
-
-.options button:hover:not(.correct):not(.incorrect) {
-    background-color: #e0e0e0;
-}
-
-/* 狀態/反饋 */
-.hidden {
-    display: none;
-}
-
-#loader-status {
-    padding: 10px;
-    background-color: #f1c40f;
-    color: var(--color-primary);
-    border-radius: 4px;
+    padding: 15px 10px;
     text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
-/* 答題反饋 */
-.correct { background-color: var(--color-noun) !important; color: white !important; }
-.incorrect { background-color: var(--color-adj) !important; color: white !important; }
-
-.feedback-text {
-    font-weight: bold;
-    padding: 10px;
-    border-radius: 4px;
-    margin-top: 10px;
-    text-align: center;
-}
-
-/* 錯題回顧 */
-.mistake-item {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-}
-.mistake-item h4 {
-    margin-top: 0;
+h1 {
+    font-size: 1.5em;
     margin-bottom: 5px;
 }
 
-/* 歷史紀錄表格 */
-#history-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-#history-table th, #history-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-#history-table th {
-    background-color: #f2f2f2;
+main {
+    max-width: 800px;
+    margin: 20px auto;
 }
 
-/* 比例預設按鈕調整 */
-#ratio-presets button {
-    width: auto;
-    flex-grow: 1; /* 平分空間 */
-    background-color: #dcdde1;
-    color: var(--color-primary);
+/* --- View 區塊與卡片樣式 --- */
+.view {
+    background-color: var(--color-card);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
 }
-#ratio-presets button:hover {
-    background-color: #bdc3c7;
+
+h2 {
+    color: var(--color-primary);
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: 10px;
+    font-size: 1.4em;
+}
+
+/* --- 按鈕樣式 --- */
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+}
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: var(--color-secondary);
+    color: white;
+}
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* --- 輸入框與設定群組 --- */
+.setting-group {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+input[type="number"], input[type="text"], select {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+input[type="number"] {
+    width: calc(50% - 5px); /* 讓兩個 ID 輸入框並排 */
+}
+
+
+/* --- 測驗畫面特定樣式 --- */
+#quiz-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    font-weight: bold;
+    color: var(--color-secondary);
+}
+
+#question-area {
+    text-align: center;
+    padding: 30px 0;
+    background-color: #f1f1f1;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+#question-text {
+    font-size: 1.8em;
+    color: #333;
+}
+
+/* 選擇題選項 */
+.option-btn {
+    width: 100%;
+    text-align: left;
+    background-color: var(--color-card);
+    color: #333;
+    border: 1px solid var(--color-secondary);
+    margin-top: 8px;
+}
+.option-btn:hover {
+    background-color: #e9ecef;
+}
+
+/* --- 即時回饋與狀態提示 (2.4 & 雲端同步) --- */
+#feedback-area {
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.feedback-success {
+    background-color: #d4edda;
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+}
+.feedback-error {
+    background-color: #f8d7da;
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+}
+
+/* 雲端同步狀態 */
+#sync-status-area {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    margin-top: 5px;
+}
+.sync-none { display: none; }
+.sync-loading { background-color: var(--color-warning); color: #856404; }
+.sync-success { background-color: var(--color-success); color: white; }
+.sync-error { background-color: var(--color-error); color: white; }
+
+/* --- 結果與歷史紀錄樣式 --- */
+.summary-box {
+    padding: 20px;
+    border: 2px dashed var(--color-primary);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    line-height: 2;
+}
+
+/* --- RWD：大螢幕優化 --- */
+@media (min-width: 600px) {
+    h1 {
+        font-size: 1.8em;
+    }
+    .setting-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .setting-group label {
+        flex-basis: 120px;
+        text-align: right;
+    }
+    .setting-group input, .setting-group select {
+        flex-grow: 1;
+    }
+
+    /* 按鈕並排 */
+    #quiz-controls, #setup-view > div:last-of-type {
+        display: flex;
+        gap: 15px;
+    }
+    button {
+        width: auto;
+        flex-grow: 1;
+    }
 }
